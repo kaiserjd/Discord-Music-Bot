@@ -8,11 +8,6 @@ import logging
 import validators
 from collections import deque
 
-log: logging.Logger = logging.getLogger("nester")
-
-log.info("Discord.py version: %s", discord.version_info)
-print(discord.version_info)
-
 # Get our guild ID configured
 load_dotenv()
 CURRENT_GUILD = discord.Object(int(os.getenv('GUILD')))
@@ -41,6 +36,39 @@ ffmpeg_options = {
 
 ytdl = yt_dlp.YoutubeDL(ytdl_options)
 
+# Logging setup
+
+logFormatter = logging.Formatter("%(asctime)s [%(levelname)s]     %(message)s", "%Y-%m-%d %H:%M:%S")
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s]     %(message)s")
+
+logger = logging.getLogger("MusicBot")
+
+
+
+class DisconnectTimer:
+    def __init__(self, timeout, callback):
+        self.timeout = timeout
+        self.disconnect_callback = callback
+        self._task = None
+
+    def start(self):
+        self.cancel()
+        self._task = asyncio.create_task(self._run())
+        logger.info("All songs have ended. Starting timer.")
+
+    def cancel(self):
+        if self._task and not self._task.done():
+            self._task.cancel()
+    
+    async def _run(self):
+        try:
+            await asyncio.sleep(self.timeout)
+            await self.disconnect_callback()
+        except asyncio.CancelledError:
+            logger.info("Song added. Timer cancelled.")
+
+
 
 class MusicBot(discord.Client):
     def __init__(self, *, intents: discord.Intents):
@@ -49,6 +77,9 @@ class MusicBot(discord.Client):
         # Use a CommandTree for storing application commands
         self.tree = app_commands.CommandTree(self)
         self.current_vc = None
+
+        # Setup disconnect timer for 5 minutes
+        # disconnect_timer = DisconnectTimer(300, self.leave)
 
     # sync app commands to one guild (squadgang) so they show up to users
     async def setup_hook(self):
@@ -62,8 +93,8 @@ client = MusicBot(intents=intents)
 # Basic logging - end of setup tasks
 @client.event
 async def on_ready():
-    log.info("Starting MusicBot. Logged in as %s", client.user)
-    log.info("Discord.py version: %s", discord.version_info)
+    logger.info("Starting MusicBot. Logged in as %s", client.user)
+    logger.info("Discord.py version: %s", discord.version_info)
 
 
 
@@ -108,6 +139,8 @@ async def play(interaction: discord.Interaction, query: str):
     """ Plays either a specific URL or the first result from 'query'. """
 
     await interaction.response.defer()
+
+    #MusicBot.disconnect_timer.cancel()
 
     voice_channel = interaction.user.voice.channel
     voice_client = interaction.guild.voice_client
@@ -233,6 +266,8 @@ async def play_next(voice_client, channel):
         asyncio.create_task(channel.send(f'All songs have finished playing. Goodbye!'))
         await voice_client.disconnect()
         queue.clear()
+        #MusicBot.disconnect_timer.start()
+
 
 # Actually run the bot
-client.run(os.getenv('BOT_TOKEN'))
+client.run(os.getenv('BOT_TOKEN'), log_handler=None)
