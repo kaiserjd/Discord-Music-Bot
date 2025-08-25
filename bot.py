@@ -81,7 +81,7 @@ class MusicBot(discord.Client):
         # Setup disconnect timer for 5 minutes
         # disconnect_timer = DisconnectTimer(300, self.leave)
 
-    # sync app commands to one guild (squadgang) so they show up to users
+    # sync app commands to one guild so they show up to users
     async def setup_hook(self):
         self.tree.copy_global_to(guild=CURRENT_GUILD)
         await self.tree.sync(guild=CURRENT_GUILD)
