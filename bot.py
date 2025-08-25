@@ -203,7 +203,6 @@ async def pause(interaction: discord.Interaction):
 
 
 
-
 # Resume the audio stream if paused
 @client.tree.command()
 async def resume(interaction: discord.Interaction):
